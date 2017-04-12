@@ -611,7 +611,7 @@ fi
 
 # Default timestamp for backups
 # Setting this in environment or argument allows for multiple backups to be synchronized
-: ${TIMESTAMP:=$(date +%Y%m%d-%H%M)}
+: ${TIMESTAMP:=$(date +%Y%m%d%H%M%S)}
 
 #======================================================================
 # Find pods for tasks
