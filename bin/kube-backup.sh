@@ -194,38 +194,7 @@ get_kubeconfig_secret ()
 # AWS Secrets
 #
 
-# Get AWS key and secret from a Kubernetes secret 
-# Only in the current namespace
-get_aws_secret ()
-{
-  local secret_name=$1
-
-  if [[ -z "${secret_name}" ]]; then
-    echo "No AWS secret name specified"
-    exit 3
-  fi
-
-  local secrets=($($KUBECTL get secret ${secret_name} -o jsonpath='{.data.AWS_ACCESS_KEY_ID} {.data.AWS_SECRET_ACCESS_KEY}'))
-  if [[ "$?" -eq 0 ]]; then
-    export AWS_ACCESS_KEY_ID=$(echo "${secrets[0]}" | $BASE64 -d)
-    export AWS_SECRET_ACCESS_KEY=$(echo "${secrets[1]}" | $BASE64 -d)
-    echo "Fetched AWS credientials from '$secret_name' secret"
-  else
-    echo "Failed to load AWS credentials from '$secret_name' secret"
-    exit 2 
-  fi
-}
-
-check_for_aws_secret ()
-{
-  local secret_name=$1
-
-  if [[ -z "${AWS_ACCESS_KEY_ID}" ]]; then
-    get_aws_secret $secret_name || return 1
-  fi
-}
-
-# Get AWS S3 settings from a Kubernetes secret 
+# Get AWS S3 settings from a Kubernetes secret
 # Only looks only in the current namespace
 get_s3_secret ()
 {
@@ -374,9 +343,6 @@ backup_mysql_exec ()
   fi
 
   check_for_s3_secret $AWS_SECRET
-  if [[ -n "$S3_BUCKET" ]]; then
-    check_for_aws_secret $AWS_SECRET
-  fi
 
   #
   # Work out the database name
@@ -451,9 +417,6 @@ backup_files_exec ()
   fi
 
   check_for_s3_secret $AWS_SECRET
-  if [[ -n "$S3_BUCKET" ]]; then
-    check_for_aws_secret $AWS_SECRET
-  fi
 
   if [[ -z "${FILES_PATH}" ]]; then
     echo "No backup path specified"
@@ -648,7 +611,7 @@ fi
 
 # Default timestamp for backups
 # Setting this in environment or argument allows for multiple backups to be synchronized
-: ${TIMESTAMP:=$(date +%Y%m%d-%H%M)}
+: ${TIMESTAMP:=$(date +%Y%m%d%H%M%S)}
 
 #======================================================================
 # Find pods for tasks
@@ -694,10 +657,6 @@ case $TASK in
     send_slack_message_and_echo "Hello world" warning
   ;;
   dump-env)
-    env
-  ;;
-  test-aws)
-    check_for_aws_secret $AWS_SECRET
     env
   ;;
   *)
